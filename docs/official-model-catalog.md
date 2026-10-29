@@ -23,13 +23,37 @@ codex-mixin --no-tui provider list --json
 
 刷新会保留完整的元数据，包括 context window、reasoning levels、input modalities 和隐藏条目，其中 `visibility=hide` 的模型不会出现在选择器里。选了哪些模型、上下文怎么覆盖，仍由 Mixin 管理。
 
-已登录官方订阅账号时，Codex 托管目录复用现有账号模型发现缓存，将同名官方模型的
+已登录官方订阅账号时，Codex 托管目录以当前账号模型发现缓存确定模型集合和可见性。
+公共模板仍有、但当前账号已不再返回的模型不会进入托管目录；账号新增而模板尚未收录的
+模型使用账号返回的元数据。同名官方模型的
 `context_window`、`max_context_window` 和 `auto_compact_token_limit` 与官方账号返回值同步，
 同时保留公共模板的指令和工具定义。这一步只合并本地元数据，不增加网络请求、模型探测
 或 token 消耗；安装、手动同步和后台刷新使用相同规则。自定义 Provider 模型不受影响。
-账号切换或退出后不再使用旧账号缓存；没有匹配的账号元数据时保留公共模板。
-账号未提供的字段保留模板值，显式 `null` 则清除原值；非法数值或窗口超过最大窗口时
+账号切换或退出后不再使用旧账号缓存。已登录但没有匹配的账号目录时，同步报错，需先刷新
+OpenAI 模型列表；不会用公共模板代替账号的模型集合。未登录时仍可用公共模板准备接入。
+账号未提供的窗口字段保留模板值，显式 `null` 则清除原值；非法数值或窗口超过最大窗口时
 报错，不写入生成的托管目录。
+
+## 模型顺序
+
+默认按模型家族分组、版本号从新到旧排列。`Claude`、`Opus`、`Sonnet`、`Haiku` 归为
+同一家族，同版本按 Opus、Sonnet、Haiku 排列；`auto` 放在列表末尾。已有配置未指定排序
+模式时也使用此默认顺序。
+
+在「模型与服务」中拖动已选模型，或使用上移、下移按钮（键盘 Alt + ↑/↓），然后点击
+「保存模型选择」。保存后，模型顺序会同步到 Codex 目录的 `priority`；后续模型刷新保留
+手动顺序，新发现并自动加入的模型追加到末尾。更多菜单可恢复家族与版本默认顺序，
+同样需要保存。表头的测速、上下文等排序只用于查看，不改变保存的模型顺序。
+
+CLI 使用相同能力，可在仓库根或任意已安装 CLI 的目录运行：
+
+```bash
+codex-mixin --no-tui providers select <provider-id> --model-order manual --model <first-model> --model <second-model>
+codex-mixin --no-tui providers select <provider-id> --model-order family
+```
+
+`<provider-id>` 也可以是 `official`。只传 `--model-order` 时保留已选模型集合；显式传入
+模型列表且省略排序模式时，按传入顺序保存为手动模式。单独修改上下文不会改变排序模式。
 
 官方模型的 `official_model_contexts` 覆盖同时用于 Codex 和其他托管客户端的
 模型配置，包括 Pi、OpenCode、DSH、Claude Code 和 Claude Desktop。覆盖值必须
